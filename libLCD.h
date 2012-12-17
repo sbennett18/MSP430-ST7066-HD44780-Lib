@@ -1,12 +1,19 @@
-#ifndef LIBMSP430LCD_H_
-#define LIBMSP430LCD_H_
-
 /*
- * libMSP430LCD.h
+ * libLCD.h
+ *
+ * Header file written for Basic 16x2 Character LCD from SparkFun.
+ * (https://www.sparkfun.com/products/9053)
+ * Should work for any display utilizing the common
+ *    ST7066 / HD44780 parallel interface in 4-bit mode.
+ * Making this work for 8-bit mode should only require adjusting some
+ * of the pin definitions below and adjusting some of the initializations.
  *
  *  Created on: Oct 18, 2012
  *      Author: Stephen Bennett
  */
+
+#ifndef LIBLCD_H_
+#define LIBLCD_H_
 
 /****************************\
 |* Standard MSP430 includes *|
@@ -17,7 +24,7 @@
 #define     MCU_XTAL_CLK      1000000
 #define     MCU_XTAL_TIME     ((MCU_XTAL_CLK) / 1000)
 
-/* Convert milleseconds to clock cycles. */
+/* Convert milliseconds to clock cycles. */
 #define     _delay_milliseconds(msecs) \
                __delay_cycles(((msecs) * (MCU_XTAL_TIME)))
 
@@ -79,8 +86,8 @@
 /* Display Initialization Defines */
 #define     DISPLAY_ON        0x08  // Must be set to execute DISPLAY_ON_CMD
 #define     ENTIRE_DISP_ON    0x04
-#define     CURSOR_ON         0x02
-#define     CURSOR_BLINK_ON   0x01
+#define     CURSOR_ON         0x02  // Show the cursor at current position
+#define     CURSOR_BLINK_ON   0x01  // Make the cursor blink
 /* Display Initialization Command - modify to liking */
 #define     DISPLAY_ON_CMD    (DISPLAY_ON | ENTIRE_DISP_ON | CURSOR_ON)
 
@@ -110,7 +117,10 @@ typedef     unsigned char     uint8_t;
 void LCD_init(void);
 void LCD_printStr(char *text);
 void LCD_printChar(char character);
+void LCD_sendCommand(char command);
 void LCD_setCursorPosition(uint8_t row, uint8_t col);
 void LCD_clearScreen(void);
 
 #endif
+
+// vim: tabstop=3 expandtab shiftwidth=3 softtabstop=3

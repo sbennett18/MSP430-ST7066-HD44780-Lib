@@ -1,17 +1,18 @@
 /*
- * libMSP430LCD.c
+ * libLCD.c
  *
  *  Created on: Oct 18, 2012
  *      Author: Stephen Bennett
  */
 
-#include "libMSP430LCD.h"
+#include "libLCD.h"
 
 
 /******************************\
 |* Helper Function Prototypes *|
 \******************************/
-void LCD_sendByte(char byteToSend, uint8_t byteType);
+void LCD_sendCommand(char command);
+inline void LCD_sendByte(char byteToSend, uint8_t byteType);
 void LCD_sendNibble(char nibbleToSend);
 void LCD_pulseEnablePin(void);
 
@@ -20,7 +21,7 @@ void LCD_pulseEnablePin(void);
 |* Public Functions *|
 \********************/
 
-/***************************************************************************\
+/*-------------------------------------------------------------------------*\
 |* PUBLIC FUNCTION :: LCD_setCursorPosition
 |*
 |*    Set the position of the cursor on the screen.
@@ -35,7 +36,7 @@ void LCD_pulseEnablePin(void);
 |*
 |*    void
 |*
-\***************************************************************************/
+\*-------------------------------------------------------------------------*/
 void LCD_setCursorPosition(uint8_t row, uint8_t col)
 {
    uint8_t address;
@@ -52,11 +53,10 @@ void LCD_setCursorPosition(uint8_t row, uint8_t col)
 
    address |= col;
 
-   LCD_sendByte(0x80 | address, COMMAND);
+   LCD_sendCommand(0x80 | address);
 }
 
-
-/***************************************************************************\
+/*-------------------------------------------------------------------------*\
 |* PUBLIC FUNCTION :: LCD_clearScreen
 |*
 |*    Clear the screen data and return the cursor to home position (0, 0).
@@ -71,15 +71,14 @@ void LCD_setCursorPosition(uint8_t row, uint8_t col)
 |*
 |*    void
 |*
-\***************************************************************************/
+\*-------------------------------------------------------------------------*/
 void LCD_clearScreen(void)
 {
-   LCD_sendByte(CLEAR_DISP_CMD, COMMAND);
-   LCD_sendByte(RET_HOME_CMD, COMMAND);
+   LCD_sendCommand(CLEAR_DISP_CMD);
+   LCD_sendCommand(RET_HOME_CMD);
 }
 
-
-/***************************************************************************\
+/*-------------------------------------------------------------------------*\
 |* PUBLIC FUNCTION :: LCD_init
 |*
 |*    Initialize the LCD after power-up
@@ -96,7 +95,7 @@ void LCD_clearScreen(void)
 |*
 |*    void
 |*
-\***************************************************************************/
+\*-------------------------------------------------------------------------*/
 void LCD_init(void)
 {
    /* Set the MSP pin configurations and bring them LOW */
@@ -110,39 +109,46 @@ void LCD_init(void)
 
    /* Wait for the LCD to warm up and reach active regions.
     * Remember MSPs can power up much faster than the LCD.
+    * (At least 40ms after Vcc rises above 2.7V)
     */
-   _delay_milliseconds(100);
+   _delay_milliseconds(80);
 
    /*****************************\
    |* Initialize the LCD module *|
    \*****************************/
+   /* According to Hitachi HD44780 datasheet (fig 24, pg 46) */
 
-   /* 1a. Set 4-bit input - first time */
-   LCD_OUT_DATA = FUNCTION_SET;
-   LCD_pulseEnablePin();
+   /* 1a. Set to 4-bit input - try three (3) times */
+   uint8_t i = 3;
+   while (i != 0)
+   {
+      LCD_sendNibble(0x03);
+      _delay_milliseconds(5);
+      --i;
+   }
 
-   _delay_milliseconds(10);
+   /* 1b. Set to 4-bit interface */
+   LCD_sendNibble(0x02);
+   _delay_milliseconds(1);
 
-   /* 1b. Set 4-bit mode, number of lines, and font size.
-    * Second time (as required by the data sheet).
+   /* 1c. Set number of lines, font size, etc. */
+   LCD_sendCommand(FUNCTION_SET_CMD);
+   _delay_milliseconds(1);
+
+   /* 2. Initialize display
+    *    Turn display on/off, cursor on/off, cursor blinking on/off
     */
-   _delay_milliseconds(10);
+   LCD_sendCommand(DISPLAY_ON_CMD);
+   _delay_milliseconds(1);
 
-   LCD_sendByte(FUNCTION_SET_CMD, COMMAND);
-
-   /* 2. Initialize display */
-   LCD_sendByte(DISPLAY_ON_CMD, COMMAND);
-
-   _delay_milliseconds(10);
-
-   /* 3. Cursor move auto-increment */
-   LCD_sendByte(ENTRY_MODE_CMD, COMMAND);
-
-   _delay_milliseconds(10);
+   /* 3. Initialize entry mode
+    *    Text direction, cursor move, display shifting, etc.
+    */
+   LCD_sendCommand(ENTRY_MODE_CMD);
+   _delay_milliseconds(1);
 }
 
-
-/***************************************************************************\
+/*-------------------------------------------------------------------------*\
 |* PUBLIC FUNCTION :: LCD_printStr
 |*
 |*    Print a string of characters to the screen.
@@ -155,7 +161,7 @@ void LCD_init(void)
 |*
 |*    void
 |*
-\***************************************************************************/
+\*-------------------------------------------------------------------------*/
 void LCD_printStr(char *text)
 {
    char *c;
@@ -168,8 +174,7 @@ void LCD_printStr(char *text)
    }
 }
 
-
-/***************************************************************************\
+/*-------------------------------------------------------------------------*\
 |* PUBLIC FUNCTION :: LCD_printChar
 |*
 |*    Print a character to the screen.
@@ -182,10 +187,28 @@ void LCD_printStr(char *text)
 |*
 |*    void
 |*
-\***************************************************************************/
+\*-------------------------------------------------------------------------*/
 void LCD_printChar(char character)
 {
    LCD_sendByte(character, DATA);
+}
+
+/*-------------------------------------------------------------------------*\
+|* PUBLIC FUNCTION :: LCD_sendCommand
+|*
+|*    Send a command to the LCD on the data bus in 4 bit mode.
+|*
+|* PARAMETERS
+|*
+|*    command - command to send
+|*
+|* RETURN
+|*
+|*    void
+|*
+\*-------------------------------------------------------------------------*/
+void LCD_sendCommand(char command) {
+   LCD_sendByte(command, COMMAND);
 }
 
 
@@ -193,7 +216,7 @@ void LCD_printChar(char character)
 |* Helper Functions *|
 \********************/
 
-/***************************************************************************\
+/*-------------------------------------------------------------------------*\
 |* HELPER FUNCTION :: LCD_sendByte
 |*
 |*    Send a byte on the data bus in 4 bit mode.
@@ -209,8 +232,8 @@ void LCD_printChar(char character)
 |*
 |*    void
 |*
-\***************************************************************************/
-void LCD_sendByte(char byteToSend, uint8_t byteType)
+\*-------------------------------------------------------------------------*/
+inline void LCD_sendByte(char byteToSend, uint8_t byteType)
 {
    /* Set Reg Select line to appropriate mode (HIGH: data | LOW: command) */
    if (byteType == COMMAND)
@@ -229,8 +252,7 @@ void LCD_sendByte(char byteToSend, uint8_t byteType)
    LCD_sendNibble( byteToSend & 0x0F);
 }
 
-
-/***************************************************************************\
+/*-------------------------------------------------------------------------*\
 |* HELPER FUNCTION :: LCD_sendNibble
 |*
 |*    Send a nibble on the data bus in 4 bit mode.
@@ -243,7 +265,7 @@ void LCD_sendByte(char byteToSend, uint8_t byteType)
 |*
 |*    void
 |*
-\***************************************************************************/
+\*-------------------------------------------------------------------------*/
 void LCD_sendNibble(char nibbleToSend)
 {
    /* Clear out all data pins */
@@ -256,8 +278,7 @@ void LCD_sendNibble(char nibbleToSend)
    LCD_pulseEnablePin();
 }
 
-
-/***************************************************************************\
+/*-------------------------------------------------------------------------*\
 |* HELPER FUNCTION :: LCD_pulseEnablePin
 |*
 |*    This function must be called whenever the LCD needs
@@ -271,7 +292,7 @@ void LCD_sendNibble(char nibbleToSend)
 |*
 |*    void
 |*
-\***************************************************************************/
+\*-------------------------------------------------------------------------*/
 void LCD_pulseEnablePin(void)
 {
    /* Pull EN bit low */
@@ -286,3 +307,5 @@ void LCD_pulseEnablePin(void)
    LCD_OUT_EN &= ~LCD_PIN_EN;
    __delay_cycles(200);
 }
+
+// vim: tabstop=3 expandtab shiftwidth=3 softtabstop=3
