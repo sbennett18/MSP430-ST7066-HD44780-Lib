@@ -102,10 +102,12 @@ void LCD_init(void)
    LCD_DIR_DATA |= LCD_MASK_DATA;
    LCD_DIR_RS   |= LCD_PIN_RS;
    LCD_DIR_EN   |= LCD_PIN_EN;
+   LCD_DIR_RW   |= LCD_PIN_RW;
 
    LCD_OUT_DATA &= ~(LCD_MASK_DATA);
    LCD_OUT_RS   &= ~LCD_PIN_RS;
    LCD_OUT_EN   &= ~LCD_PIN_EN;
+   LCD_OUT_RW   &= ~LCD_PIN_RW;
 
    /* Wait for the LCD to warm up and reach active regions.
     * Remember MSPs can power up much faster than the LCD.
