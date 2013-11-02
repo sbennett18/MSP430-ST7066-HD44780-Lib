@@ -99,12 +99,10 @@ void LCD_clearScreen(void)
 void LCD_init(void)
 {
    /* Set the MSP pin configurations and bring them LOW */
-   LCD_DIR_DATA |= LCD_MASK_DATA;
+   DATA_PIN_SETUP();
    LCD_SETUP_RS();
    LCD_SETUP_EN();
    LCD_SETUP_RW();
-
-   LCD_OUT_DATA &= ~(LCD_MASK_DATA);
 
    /* Wait for the LCD to warm up and reach active regions.
     * Remember MSPs can power up much faster than the LCD.
@@ -267,11 +265,8 @@ inline void LCD_sendByte(char byteToSend, uint8_t byteType)
 \*-------------------------------------------------------------------------*/
 void LCD_sendNibble(char nibbleToSend)
 {
-   /* Clear out all data pins */
-   LCD_OUT_DATA &= ~(LCD_MASK_DATA);
-
-   /* Set the nibble */
-   LCD_OUT_DATA |= nibbleToSend;
+   /* Clear out and then set the nibble */
+   DATA_PIN_OUTPUT(nibbleToSend);
 
    /* Data lines to LCD now set up - tell it to read them */
    LCD_pulseEnablePin();
