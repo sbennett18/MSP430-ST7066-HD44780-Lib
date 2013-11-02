@@ -10,6 +10,8 @@
  *
  *  Created on: Oct 18, 2012
  *      Author: Stephen Bennett
+ *
+ *  support for flexible PIN use added by hecke 'Nov 02, 2013
  */
 
 #ifndef LIBLCD_H_
@@ -28,42 +30,64 @@
 #define     _delay_milliseconds(msecs) \
                __delay_cycles(((msecs) * (MCU_XTAL_TIME)))
 
-
 /***************************************\
-|* Define Ports Used for Communication *| For now, all pins should be on the same port
+|* Define Ports Used for Communication *|
 \***************************************/
-/* Data pins must be on same port */
-#define     LCD_DIR_DATA      P1DIR
-#define     LCD_OUT_DATA      P1OUT
 
-/* Reg Select Port */
-#define     LCD_DIR_RS        P1DIR
-#define     LCD_OUT_RS        P1OUT
+/* macro, generates
+LCD_SETUP_<name>
+LCD_SET_<name>
+LCD_CLEAR_<name>
+*/
+#define CTRL_PIN_DEF(NAME, PORT, PIN, INIT_STATE)             \
+               CTRL_PIN_SETUP(NAME, PORT, PIN, INIT_STATE)    \
+               CTRL_PIN_SET(NAME, PORT, PIN)                  \
+               CTRL_PIN_CLEAR(NAME, PORT, PIN)
+#define CTRL_PIN_SETUP(NAME, PORT, PIN, INIT_STATE)      \
+               static inline void LCD_SETUP_##NAME() {   \
+                     P ## PORT ## DIR |= BIT ## PIN;     \
+                     if (INIT_STATE) {                   \
+                        P ## PORT ## OUT |= BIT ## PIN;  \
+                     } else {                            \
+                        P ## PORT ## OUT &= ~BIT ## PIN; \
+                     }                                   \
+               }
+#define CTRL_PIN_SET(NAME, PORT, PIN)                    \
+               static inline void LCD_SET_##NAME() {     \
+                     P ## PORT ## OUT |= BIT ## PIN;     \
+               }
+#define CTRL_PIN_CLEAR(NAME, PORT, PIN)                  \
+               static inline void LCD_CLEAR_##NAME() {   \
+                     P ## PORT ## OUT &= ~BIT ## PIN;    \
+               }
 
-/* Read/Write Port */
-#define     LCD_DIR_RW        P1DIR
-#define     LCD_OUT_RW        P1OUT
+CTRL_PIN_DEF(RW, 1, 6, 0)
+CTRL_PIN_DEF(RS, 1, 5, 0)
+CTRL_PIN_DEF(EN, 1, 4, 0)
 
-/* Enable Port */
-#define     LCD_DIR_EN        P1DIR
-#define     LCD_OUT_EN        P1OUT
+#define DATA_PIN_DEF(PORT4, PIN4, PORT5, PIN5, PORT6, PIN6, PORT7, PIN7)   \
+               static inline void DATA_PIN_SETUP() {                       \
+                  P ## PORT4 ## DIR |= BIT ## PIN4;                        \
+                  P ## PORT5 ## DIR |= BIT ## PIN5;                        \
+                  P ## PORT6 ## DIR |= BIT ## PIN6;                        \
+                  P ## PORT7 ## DIR |= BIT ## PIN7;                        \
+                  P ## PORT4 ## OUT &= ~BIT ## PIN4;                       \
+                  P ## PORT5 ## OUT &= ~BIT ## PIN5;                       \
+                  P ## PORT6 ## OUT &= ~BIT ## PIN6;                       \
+                  P ## PORT7 ## OUT &= ~BIT ## PIN7;                       \
+               }                                                           \
+               static inline void DATA_PIN_OUTPUT(char v) {                \
+                  P ## PORT4 ## OUT &= ~BIT ## PIN4;                       \
+                  P ## PORT5 ## OUT &= ~BIT ## PIN5;                       \
+                  P ## PORT6 ## OUT &= ~BIT ## PIN6;                       \
+                  P ## PORT7 ## OUT &= ~BIT ## PIN7;                       \
+                  P ## PORT4 ## OUT |= ((!!(v & 0x01)) << PIN4);           \
+                  P ## PORT5 ## OUT |= ((!!(v & 0x02)) << PIN5);           \
+                  P ## PORT6 ## OUT |= ((!!(v & 0x04)) << PIN6);           \
+                  P ## PORT7 ## OUT |= ((!!(v & 0x08)) << PIN7);           \
+              }
 
-
-/*************************************\
-|* Define Pins Used for Communication*|
-\*************************************/
-/* Data pins must be consecutive & ascending */
-#define     LCD_PIN_D4        BIT0
-#define     LCD_PIN_D5        BIT1
-#define     LCD_PIN_D6        BIT2
-#define     LCD_PIN_D7        BIT3
-
-#define     LCD_PIN_RS        BIT5
-#define     LCD_PIN_RW        BIT6
-#define     LCD_PIN_EN        BIT4
-
-#define     LCD_MASK_DATA     (LCD_PIN_D7 | LCD_PIN_D6 | LCD_PIN_D5 | LCD_PIN_D4)
-
+DATA_PIN_DEF(2, 0, 1, 0, 2, 2, 1, 7)
 
 /*****************************************\
 |* Define Useful Display Characteristics *|

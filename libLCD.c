@@ -99,13 +99,10 @@ void LCD_clearScreen(void)
 void LCD_init(void)
 {
    /* Set the MSP pin configurations and bring them LOW */
-   LCD_DIR_DATA |= LCD_MASK_DATA;
-   LCD_DIR_RS   |= LCD_PIN_RS;
-   LCD_DIR_EN   |= LCD_PIN_EN;
-
-   LCD_OUT_DATA &= ~(LCD_MASK_DATA);
-   LCD_OUT_RS   &= ~LCD_PIN_RS;
-   LCD_OUT_EN   &= ~LCD_PIN_EN;
+   DATA_PIN_SETUP();
+   LCD_SETUP_RS();
+   LCD_SETUP_EN();
+   LCD_SETUP_RW();
 
    /* Wait for the LCD to warm up and reach active regions.
     * Remember MSPs can power up much faster than the LCD.
@@ -238,11 +235,11 @@ inline void LCD_sendByte(char byteToSend, uint8_t byteType)
    /* Set Reg Select line to appropriate mode (HIGH: data | LOW: command) */
    if (byteType == COMMAND)
    {
-      LCD_OUT_RS &= ~LCD_PIN_RS;
+      LCD_CLEAR_RS();
    }
    else // (byteType == DATA)
    {
-      LCD_OUT_RS |= LCD_PIN_RS;
+      LCD_SET_RS();
    }
 
    /* set High Nibble (HN) on data lines */
@@ -268,11 +265,8 @@ inline void LCD_sendByte(char byteToSend, uint8_t byteType)
 \*-------------------------------------------------------------------------*/
 void LCD_sendNibble(char nibbleToSend)
 {
-   /* Clear out all data pins */
-   LCD_OUT_DATA &= ~(LCD_MASK_DATA);
-
-   /* Set the nibble */
-   LCD_OUT_DATA |= nibbleToSend;
+   /* Clear out and then set the nibble */
+   DATA_PIN_OUTPUT(nibbleToSend);
 
    /* Data lines to LCD now set up - tell it to read them */
    LCD_pulseEnablePin();
@@ -296,15 +290,15 @@ void LCD_sendNibble(char nibbleToSend)
 void LCD_pulseEnablePin(void)
 {
    /* Pull EN bit low */
-   LCD_OUT_EN &= ~LCD_PIN_EN;
+   LCD_CLEAR_EN();
    __delay_cycles(200);
 
    /* Pull EN bit high */
-   LCD_OUT_EN |= LCD_PIN_EN;
+   LCD_SET_EN();
    __delay_cycles(200);
 
    /* Pull EN bit low again */
-   LCD_OUT_EN &= ~LCD_PIN_EN;
+   LCD_CLEAR_EN();
    __delay_cycles(200);
 }
 
