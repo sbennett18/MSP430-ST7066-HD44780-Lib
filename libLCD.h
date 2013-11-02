@@ -33,21 +33,40 @@
 |* Define Ports Used for Communication *| For now, all pins should be on the same port
 \***************************************/
 /* Data pins must be on same port */
-#define     LCD_DIR_DATA      P1DIR
-#define     LCD_OUT_DATA      P1OUT
 
-/* Reg Select Port */
-#define     LCD_DIR_RS        P1DIR
-#define     LCD_OUT_RS        P1OUT
+/* macro, generates
+LCD_SETUP_<name>
+LCD_SET_<name>
+LCD_CLEAR_<name>
+*/
+#define CTRL_PIN_DEF(NAME, PORT, PIN, INIT_STATE)             \
+               CTRL_PIN_SETUP(NAME, PORT, PIN, INIT_STATE)    \
+               CTRL_PIN_SET(NAME, PORT, PIN)                  \
+               CTRL_PIN_CLEAR(NAME, PORT, PIN)
+#define CTRL_PIN_SETUP(NAME, PORT, PIN, INIT_STATE)      \
+               static inline void LCD_SETUP_##NAME() {   \
+                     P ## PORT ## DIR |= BIT ## PIN;     \
+                     if (INIT_STATE) {                   \
+                        P ## PORT ## OUT |= BIT ## PIN;  \
+                     } else {                            \
+                        P ## PORT ## OUT &= ~BIT ## PIN; \
+                     }                                   \
+               }
+#define CTRL_PIN_SET(NAME, PORT, PIN)                    \
+               static inline void LCD_SET_##NAME() {     \
+                     P ## PORT ## OUT |= BIT ## PIN;     \
+               }
+#define CTRL_PIN_CLEAR(NAME, PORT, PIN)                  \
+               static inline void LCD_CLEAR_##NAME() {   \
+                     P ## PORT ## OUT &= ~BIT ## PIN;    \
+               }
 
-/* Read/Write Port */
-#define     LCD_DIR_RW        P1DIR
-#define     LCD_OUT_RW        P1OUT
+CTRL_PIN_DEF(RW, 1, 6, 0)
+CTRL_PIN_DEF(RS, 1, 5, 0)
+CTRL_PIN_DEF(EN, 1, 4, 0)
 
-/* Enable Port */
-#define     LCD_DIR_EN        P1DIR
-#define     LCD_OUT_EN        P1OUT
-
+#define     LCD_DIR_DATA      P2DIR
+#define     LCD_OUT_DATA      P2OUT
 
 /*************************************\
 |* Define Pins Used for Communication*|
@@ -57,10 +76,6 @@
 #define     LCD_PIN_D5        BIT1
 #define     LCD_PIN_D6        BIT2
 #define     LCD_PIN_D7        BIT3
-
-#define     LCD_PIN_RS        BIT5
-#define     LCD_PIN_RW        BIT6
-#define     LCD_PIN_EN        BIT4
 
 #define     LCD_MASK_DATA     (LCD_PIN_D7 | LCD_PIN_D6 | LCD_PIN_D5 | LCD_PIN_D4)
 
